@@ -1,6 +1,6 @@
 {
   "name": "@sabl/txn",
-  "version": "0.1.0",
+  "version": "0.1.0-a01",
   "description": "Uniform transaction lifecycle interfaces",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,7 +28,7 @@
   ],
   "keywords": [
     "sabl",
-    "storage"
+    "transaction"
   ],
   "license": "MIT",
   "dependencies": {
