@@ -1,0 +1,62 @@
+{
+  "name": "@sabl/txn",
+  "version": "0.1.0",
+  "description": "Uniform transaction lifecycle interfaces",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "clean": "rimraf coverage dist publish test/fixtures/coverage",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "test": "jest",
+    "test:view": "jest --coverageReporters text lcov && opener ./coverage/lcov-report/index.html",
+    "test:refresh": "jest --coverageReporters text lcov",
+    "test:ci": "jest --coverageReporters text cobertura json",
+    "test:fixtures": "jest --projects ./test/fixtures/jest.config.js",
+    "test:fixtures:view": "jest --projects ./test/fixtures/jest.config.js --coverageReporters text lcov && opener ./test/fixtures/coverage/lcov-report/index.html",
+    "test:fixtures:refresh": "jest --projects ./test/fixtures/jest.config.js --coverageReporters text lcov",
+    "cbt": "pnpm clean && pnpm build && pnpm test",
+    "postinstall": "husky install",
+    "pub": "pnpm clean && pnpm build && node -r esm ./build/publish.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/libsabl/txn-js"
+  },
+  "contributors": [
+    "Joshua Honig"
+  ],
+  "keywords": [
+    "sabl",
+    "storage"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@sabl/context": "^0.3.3"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^16.3.0",
+    "@commitlint/config-conventional": "^16.2.4",
+    "@faker-js/faker": "^7.3.0",
+    "@jest/types": "^28.1.3",
+    "@types/jest": "^28.1.5",
+    "@types/node": "^17.0.45",
+    "@types/rmfr": "^2.0.1",
+    "@typescript-eslint/eslint-plugin": "^5.30.6",
+    "@typescript-eslint/parser": "^5.30.6",
+    "chalk": "^4.1.2",
+    "eslint": "^8.19.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
+    "esm": "^3.2.25",
+    "glob": "^8.0.3",
+    "husky": "^8.0.1",
+    "jest": "^28.1.3",
+    "opener": "^1.5.2",
+    "prettier": "^2.7.1",
+    "rimraf": "^3.0.2",
+    "rmfr": "^2.0.0",
+    "ts-jest": "^28.0.6",
+    "typescript": "^4.7.4"
+  }
+}
