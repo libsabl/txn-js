@@ -6,9 +6,9 @@
 
 # @sabl/txn
 
-**txn** is a simple, [context](https://github.com/libsabl/patterns/blob/main/patterns/context.md)-aware pattern for describing transactions - batches of operations which should all succeed together or be rolled back. The pattern can be used to run actual storage system transactions, but it is also useful for running conceptual transactions purely in a client runtime, which avoid the blocking costs of native database transactions but still allow clean up of resources if a series operations does not all succeed. 
+**txn** is a simple, [context](https://github.com/libsabl/patterns/blob/main/patterns/context.md)-aware pattern for describing transactions - batches of operations which should all succeed together or be rolled back. The pattern can be used to run actual storage system transactions, but it is also useful for running conceptual transactions purely in a client runtime, which avoid the blocking costs of native database transactions but still allow clean up of resources if a series of operations does not all succeed. 
 
-Defining these interfaces and algorithms in the abstract allows authors to write effective business logic that includes basic CRUD actions and even transaction workflows, without depending on a specific storage type, let alone a specific proprietary driver. This is in turn allows concise and testable code while avoiding over-dependence on implementation details of underlying storage choices.
+Defining these interfaces and algorithms in the abstract allows authors to write effective business logic that includes transaction workflows, without depending on a specific storage type, let alone a specific proprietary driver. This is in turn allows concise and testable code while avoiding over-dependence on implementation details of underlying storage choices.
    
 For more detail on the txn pattern, see sabl / [patterns](https://github.com/libsabl/patterns#patterns) / [txn](https://github.com/libsabl/patterns/blob/main/patterns/txn.md). 
 
