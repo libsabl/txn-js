@@ -32,8 +32,8 @@ A simple representation of a transaction which can be either committed or rolled
 
 ```ts
 interface Txn {
-  commit(ctx: IContext): Promise<void>;
-  rollback(ctx: IContext): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
 }
 ```
 
@@ -75,8 +75,8 @@ A ChangeSet is an in-memory transaction which simply accumulates a list of callb
 interface ChangeSet extends Txn {
   defer(fn: (ctx: IContext) => Promise<void>): void;
   deferFail(fn: (ctx: IContext) => Promise<void>): void;
-  commit(ctx: IContext): Promise<void>;
-  rollback(ctx: IContext): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
 }
 ```
 
@@ -91,8 +91,8 @@ A TxnChangeSet combines both the in-memory ChangeSet and an underlying transacti
   deferTxn(fn: (ctx: IContext, txn: T) => Promise<void>): void;
   defer(fn: (ctx: IContext) => Promise<void>): void;
   deferFail(fn: (ctx: IContext) => Promise<void>): void;
-  commit(ctx: IContext): Promise<void>;
-  rollback(ctx: IContext): Promise<void>;
+  commit(): Promise<void>;
+  rollback(): Promise<void>;
 }
 ```
 
@@ -126,10 +126,10 @@ class MySQLTxn implements Txn, MySQLApi {
   begin(ctx: IContext, opts?: TxnOptions) {
     return this.con.execute('START TRANSACTION');
   }
-  async commit(ctx: IContext): Promise<void> {
+  async commit(): Promise<void> {
     await this.con.execute('COMMIT');
   }
-  async rollback(ctx: IContext): Promise<void>{
+  async rollback(): Promise<void>{
     await this.con.execute('ROLLBACK');
   }
   execute(...) { return this.con.execute(...) }

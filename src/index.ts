@@ -57,8 +57,8 @@ export function getTxnAccessor(ctx: IContext): Maybe<TxnAccessor<Txn>> {
 }
 
 const csBuilder: Transactable<ChangeSet> = {
-  beginTxn() {
-    return Promise.resolve(new ChangeSetImpl());
+  beginTxn(ctx: IContext) {
+    return Promise.resolve(new ChangeSetImpl(ctx));
   },
 };
 
@@ -84,9 +84,9 @@ function makeTxnCsAccessor<T extends Txn>(
   return {
     getTransactable(): Maybe<Transactable<TxnChangeSet<T>>> {
       return {
-        beginTxn() {
+        beginTxn(ctx: IContext) {
           const runner = txn(accessor);
-          return Promise.resolve(new TxnChangeSetImpl(runner));
+          return Promise.resolve(new TxnChangeSetImpl(ctx, runner));
         },
       };
     },
@@ -248,9 +248,9 @@ class TxnRunnerImpl<T extends Txn> implements TxnRunner<T> {
     const txnContext = this.#withTxn(ctx, txn);
     try {
       await fn(txnContext, txn);
-      await txn.commit(ctx);
+      await txn.commit();
     } catch (e) {
-      await txn.rollback(ctx);
+      await txn.rollback();
       let errSuffix = '';
       if (e != null) {
         errSuffix = ': ' + String(e);
@@ -307,8 +307,14 @@ class TxnRunnerImpl<T extends Txn> implements TxnRunner<T> {
 class ChangeSetImpl implements ChangeSet {
   protected readonly commitFns: CtxCallback[] = [];
   protected readonly rollbackFns: CtxCallback[] = [];
+  protected readonly ctx: IContext;
+
   protected done = false;
   protected ignoreStatus = false;
+
+  constructor(ctx: IContext) {
+    this.ctx = ctx;
+  }
 
   protected checkStatus() {
     if (this.done) {
@@ -326,9 +332,10 @@ class ChangeSetImpl implements ChangeSet {
     this.rollbackFns.push(fn);
   }
 
-  async commit(ctx: IContext): Promise<void> {
+  async commit(): Promise<void> {
     this.checkStatus();
     this.done = true;
+    const ctx = this.ctx;
     let ok = false;
     try {
       for (const fn of this.commitFns) {
@@ -340,7 +347,7 @@ class ChangeSetImpl implements ChangeSet {
     }
   }
 
-  async rollback(ctx: IContext): Promise<void> {
+  async rollback(): Promise<void> {
     if (this.ignoreStatus) {
       // rollback is being called after commit() failed
       this.ignoreStatus = false;
@@ -348,6 +355,7 @@ class ChangeSetImpl implements ChangeSet {
       this.checkStatus();
     }
     this.done = true;
+    const ctx = this.ctx;
     for (const fn of this.rollbackFns) {
       await fn(ctx);
     }
@@ -361,8 +369,8 @@ class TxnChangeSetImpl<T extends Txn>
   readonly #commitTxn: TxnCallback<T>[] = [];
   readonly #txnRunner: TxnRunner<T>;
 
-  constructor(txnRunner: TxnRunner<T>) {
-    super();
+  constructor(ctx: IContext, txnRunner: TxnRunner<T>) {
+    super(ctx);
     this.#txnRunner = txnRunner;
   }
 
@@ -370,10 +378,11 @@ class TxnChangeSetImpl<T extends Txn>
     this.#commitTxn.push(fn);
   }
 
-  async commit(ctx: IContext): Promise<void> {
+  async commit(): Promise<void> {
     this.checkStatus();
     this.done = true;
     let ok = false;
+    const ctx = this.ctx;
 
     if (this.#commitTxn.length > 0) {
       try {
