@@ -28,10 +28,10 @@ export interface TxnOptions {
 /** An abstract transaction that can be committed or rolled back */
 export interface Txn {
   /** Commit all pending operations */
-  commit(ctx: IContext): Promise<void>;
+  commit(): Promise<void>;
 
   /** Rollback all pending operations. */
-  rollback(ctx: IContext): Promise<void>;
+  rollback(): Promise<void>;
 }
 
 /** An interface that can start a transaction of a given type */
@@ -110,11 +110,11 @@ export interface ChangeSet extends Txn {
   deferFail(fn: (ctx: IContext) => Promise<unknown> | unknown): void;
 
   /** Execute the deferred callbacks */
-  commit(ctx: IContext): Promise<void>;
+  commit(): Promise<void>;
 
   /** Cancel execution of any further `defer` callbacks
    * and executed any scheduled `deferFail` callbacks. */
-  rollback(ctx: IContext): Promise<void>;
+  rollback(): Promise<void>;
 }
 
 /**

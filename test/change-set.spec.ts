@@ -135,7 +135,7 @@ function changeSetTests(fnRunTxn: RunCallback<ChangeSet>): void {
           stack.splice(stack.indexOf('c'), 1);
         });
 
-        await cs.commit(ctx);
+        await cs.commit();
 
         // Changes committed now
         expect(stack).toEqual(['a', 'b', 'c']);
@@ -144,6 +144,88 @@ function changeSetTests(fnRunTxn: RunCallback<ChangeSet>): void {
 
     // Changes really were committed: Error was in calling commit twice
     expect(stack).toEqual(['a', 'b', 'c']);
+  });
+
+  it('provides context to defer callbacks', async () => {
+    const stack: string[] = [];
+    const ctx = Context.value('prefix', 'xyz: ');
+
+    await fnRunTxn(ctx, (_, cs) => {
+      cs.defer((ctx) => stack.push(ctx.value('prefix') + 'a'));
+      cs.defer((ctx) => stack.push(ctx.value('prefix') + 'b'));
+      cs.defer((ctx) => stack.push(ctx.value('prefix') + 'c'));
+
+      // Changes not yet committed
+      expect(stack).toEqual([]);
+    });
+
+    // Now changes are committed
+    expect(stack).toEqual(['xyz: a', 'xyz: b', 'xyz: c']);
+  });
+
+  it('provides context to deferFail callbacks', async () => {
+    const stack: string[] = [];
+    const msgStack: string[] = [];
+
+    function getStack(ctx: IContext): string[] {
+      return <string[]>ctx.value('stack');
+    }
+
+    function getMsgs(ctx: IContext): string[] {
+      return <string[]>ctx.value('msgstack');
+    }
+
+    const ctx = Context.value('stack', stack).withValue('msgstack', msgStack);
+
+    await expect(() =>
+      fnRunTxn(ctx, (_, cs) => {
+        cs.defer((ctx) => {
+          getStack(ctx).push('a');
+          getMsgs(ctx).push('Pushed a');
+        });
+        cs.deferFail((ctx) => {
+          getStack(ctx).splice(stack.indexOf('a'), 1);
+          getMsgs(ctx).push('Spliced out a');
+        });
+
+        cs.defer((ctx) => {
+          getStack(ctx).push('b');
+          getMsgs(ctx).push('Pushed b');
+        });
+        cs.deferFail((ctx) => {
+          getStack(ctx).splice(stack.indexOf('b'), 1);
+          getMsgs(ctx).push('Spliced out b');
+        });
+
+        cs.defer(() => {
+          throw new Error('Rolling back on purpose');
+        });
+
+        cs.defer((ctx) => {
+          getStack(ctx).push('c');
+          getMsgs(ctx).push('Pushed c');
+        });
+        cs.deferFail((ctx) => {
+          getStack(ctx).splice(stack.indexOf('c'), 1);
+          getMsgs(ctx).push('Spliced out c');
+        });
+
+        // Changes not yet committed
+        expect(stack).toEqual([]);
+      })
+    ).rejects.toThrow('Rolling back on purpose');
+
+    // Net effect is nothing on stack
+    expect(stack).toEqual([]);
+
+    // But we have evidence of what actually happened
+    expect(msgStack).toEqual([
+      'Pushed a',
+      'Pushed b',
+      'Spliced out a',
+      'Spliced out b',
+      'Spliced out c',
+    ]);
   });
 }
 

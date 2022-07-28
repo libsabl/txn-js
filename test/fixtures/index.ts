@@ -82,6 +82,7 @@ class MemStackTxn implements StackTxn {
   readonly #readonly: boolean;
   readonly #connOpts: StackConnOptions;
   readonly #txns: MemStackTxn[] = [];
+  readonly #ctx: IContext;
 
   #done = false;
   #clr?: Canceler;
@@ -91,15 +92,17 @@ class MemStackTxn implements StackTxn {
   constructor(
     con: TxnRunner & StackApi,
     stack: unknown[],
+    ctx: IContext,
     opts: TxnOptions | undefined,
-    clr: Canceler | null,
     connOpts?: StackConnOptions
   ) {
     this.#con = con;
     this.#snap = stack.concat();
+    this.#ctx = ctx;
     this.#readonly = (opts || {}).readOnly === true;
     this.#connOpts = connOpts || {};
 
+    const clr = ctx.canceler;
     if (clr != null) {
       this.#clr = clr;
       clr.onCancel(
@@ -114,25 +117,19 @@ class MemStackTxn implements StackTxn {
 
   #beginTxn(ctx: IContext, opts?: TxnOptions | undefined): Promise<StackTxn> {
     this.#checkStatus();
-    const txn = new MemStackTxn(
-      this,
-      this.#snap,
-      opts,
-      ctx.canceler,
-      this.#connOpts
-    );
+    const txn = new MemStackTxn(this, this.#snap, ctx, opts, this.#connOpts);
     this.#txns.push(txn);
     this.#ops.push({ op: 'txn', txn });
     return Promise.resolve(txn);
   }
 
-  #cancel(ctx: IContext) {
+  #cancel() {
     if (this.#onCancel) {
       this.#clr?.off(this.#onCancel);
       this.#onCancel = null;
     }
     if (!this.#done) {
-      this.rollback(ctx);
+      this.rollback();
     }
   }
 
@@ -145,14 +142,16 @@ class MemStackTxn implements StackTxn {
     }
   }
 
-  #complete(ctx: IContext): Promise<void> {
-    this.#cancel(ctx);
+  #complete(): Promise<void> {
+    this.#cancel();
     return this.#con._txnDone(this) || Promise.resolve();
   }
 
-  async commit(ctx: IContext): Promise<void> {
+  async commit(): Promise<void> {
     this.#checkStatus();
     this.#done = true;
+
+    const ctx = this.#ctx;
 
     for (const op of this.#ops) {
       if (op.op == 'pop') {
@@ -162,27 +161,27 @@ class MemStackTxn implements StackTxn {
       } else if (op.op == 'txn') {
         const txn = op.txn;
         if (txn != null && !txn.#done) {
-          await txn.commit(ctx);
+          await txn.commit();
         }
       }
     }
 
-    return this.#complete(ctx);
+    return this.#complete();
   }
 
-  async rollback(ctx: IContext): Promise<void> {
+  async rollback(): Promise<void> {
     this.#checkStatus();
     this.#done = true;
 
     if (this.#txns.length > 0) {
       const promises = [];
       for (const txn of this.#txns) {
-        promises.push(promises.push(txn.rollback(ctx)));
+        promises.push(promises.push(txn.rollback()));
       }
       this.#txns.splice(0, this.#txns.length);
       await Promise.all(promises);
     }
-    return this.#complete(ctx);
+    return this.#complete();
   }
 
   push(ctx: IContext, val: unknown): Promise<number> {
@@ -267,13 +266,7 @@ class MemStackConn implements StackConn {
 
   beginTxn(ctx: IContext, opts?: TxnOptions | undefined): Promise<StackTxn> {
     this.#checkStatus();
-    const txn = new MemStackTxn(
-      this,
-      this.#stack,
-      opts,
-      ctx.canceler,
-      this.#opts
-    );
+    const txn = new MemStackTxn(this, this.#stack, ctx, opts, this.#opts);
     this.#txns.push(txn);
     return Promise.resolve(txn);
   }
